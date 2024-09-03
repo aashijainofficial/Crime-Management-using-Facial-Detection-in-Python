@@ -1,0 +1,243 @@
+import tkinter as tk
+from tkinter import (
+        colorchooser as color,
+        commondialog as cdialog,
+        constants as const,
+        dialog,
+        dnd,
+        filedialog as fdialog,
+        font,
+        messagebox as msgbox,
+        scrolledtext as stext,
+        simpledialog as sdialog,
+        tix,
+        ttk,
+        Label,
+        Entry,
+        Button,
+        StringVar
+    )
+
+from functools import partial
+
+import csvfmgmt
+
+
+def helloCallBack():
+   msgbox.showinfo( "Hello Python", "Hello World")
+
+def donothing():
+   filewin = tk.Toplevel(root)
+   button = Button(filewin, text="Do nothing button")
+   button.pack()
+
+def validateLogin(username, password, btn):
+    user = username.get().strip()
+    pwd = password.get().strip()
+    error = ''
+
+    if len(user) <= 2 :
+        error = 'Username required with minimum 3 character'
+    elif not user.isalnum():
+        error = 'Username can only contain alphanumeric characters'
+
+    elif len(pwd) <5 :
+        error = 'password required with minimum 6 character'
+
+    if len(error) >=1 :
+        return msgbox.showerror( "Error", error)
+
+    if btn == 'register_btn_click' :
+        saveResult = saveUser(user, pwd)
+    elif btn == 'login_btn_click' :
+        loginResult = loginUser(user, pwd)
+        if loginResult :
+            msgbox.showinfo( "Login Success", "Login Successfully")
+        else :
+            msgbox.showerror( "Error", "Login Details Invalid for user " + user)
+
+    return
+
+
+def loginUser(user, password):
+    # csv file name
+    login = False
+    rows = csvfmgmt.getCSVData("users.csv")
+
+    for row in rows :
+        if row['user'] == user and row['password'] == password :
+            login = True
+        else :
+            continue
+    return login
+
+def saveUser(user, password):
+    # csv file name
+    rows = csvfmgmt.getCSVData("users.csv")
+
+    for row in rows :
+        #print(row)
+        if row['user'] == user :
+            return msgbox.showerror( "Error", user + " Already Exist in our database. Please login with your credentials")
+        else :
+            continue
+
+    item = {
+        'id': str(int(row['id']) + 1),
+        'user': user,
+        'password': password
+    }
+    rows.append(item)
+
+    if csvfmgmt.saveCSVData("users.csv", rows, ["id","user","password"]) :
+        return msgbox.showinfo( "Save Data", user + " has been added successfully to our database. Please login to process further.")
+    
+    #print(rows)
+
+
+def Close_Toplevel(toplevel_dialog):
+    # IMPORTANT!
+    root.wm_attributes("-disabled", False) # IMPORTANT!
+
+    toplevel_dialog.destroy()
+
+    # Possibly not needed, used to focus parent window again
+    root.deiconify()
+
+def Create_Toplevel():
+
+        # THE CLUE
+        root.wm_attributes("-disabled", True)
+
+        # Creating the toplevel dialog
+        toplevel_dialog = tk.Toplevel(root)
+        toplevel_dialog.minsize(300, 100)
+
+        # Tell the window manager, this is the child widget.
+        # Interesting, if you want to let the child window 
+        # flash if user clicks onto parent
+        toplevel_dialog.transient(root)
+
+
+
+        # This is watching the window manager close button
+        # and uses the same callback function as the other buttons
+        # (you can use which ever you want, BUT REMEMBER TO ENABLE
+        # THE PARENT WINDOW AGAIN)
+
+        Close_ToplevelCallback = partial(Close_Toplevel, toplevel_dialog)
+        toplevel_dialog.protocol("WM_DELETE_WINDOW", Close_ToplevelCallback)
+        
+        return toplevel_dialog
+
+
+
+def loginForm():
+    #tkWindow = tk.Toplevel(root)
+    tkWindow = Create_Toplevel();
+    frmc = ttk.Frame(tkWindow, padding=10)
+    frmc.grid()
+
+    #tkWindow.geometry('400x150')  
+    tkWindow.title('Login')
+    Label(frmc, text="Login Form",font=("Arial", 14)).grid(row=0, column=0)
+    #username label and text entry box
+    usernameLabel = Label(frmc, text="User Name").grid(row=1, column=0)
+    username = StringVar()
+    usernameEntry = Entry(frmc, textvariable=username).grid(row=1, column=1)  
+
+    #password label and password entry box
+    passwordLabel = Label(frmc,text="Password").grid(row=2, column=0)  
+    password = StringVar()
+    passwordEntry = Entry(frmc, textvariable=password, show='*').grid(row=2, column=1)  
+    validateLoginCallback = partial(validateLogin, username, password, 'login_btn_click')
+
+    #login button
+    loginButton = Button(frmc, text="Login", command=validateLoginCallback).grid(row=3, column=0)
+
+    registerFormCallback = partial(registerForm, tkWindow) #passing login window to close in register form
+    #Register button
+    registerButton = Button(frmc, text="Create New Account", command=registerFormCallback).grid(row=3, column=1)
+
+    #Close_ToplevelCallback = partial(Close_Toplevel, tkWindow)
+    #tkWindow.protocol("WM_DELETE_WINDOW", Close_ToplevelCallback)
+
+
+
+def registerForm(loginWindow):
+    Close_Toplevel(loginWindow)
+    tkWindow = Create_Toplevel();
+    frmc = ttk.Frame(tkWindow, padding=10)
+    frmc.grid()
+    
+    #tkWindow.geometry('400x150')  
+    tkWindow.title('Sign Up')
+    Label(frmc, text="Sign Up",font=("Arial", 14)).grid(row=0, column=0)
+    #username label and text entry box
+    usernameLabel = Label(frmc, text="User Name").grid(row=1, column=0)
+    username = StringVar()
+    usernameEntry = Entry(frmc, textvariable=username).grid(row=1, column=1)  
+
+    #password label and password entry box
+    passwordLabel = Label(frmc,text="Password").grid(row=2, column=0)  
+    password = StringVar()
+    passwordEntry = Entry(frmc, textvariable=password, show='*').grid(row=2, column=1)  
+    validateLoginCallback = partial(validateLogin, username, password, 'register_btn_click')
+
+    #register button
+    registerButton = Button(frmc, text="Register Me", command=validateLoginCallback).grid(row=4, column=0)
+
+
+login = False
+root = tk.Tk()
+root.geometry("750x250")
+root.title("Main Window")
+frm = ttk.Frame(root, padding=10)
+frm.grid()
+#registerForm()
+#loginForm();
+#root.mainloop()
+#saveUser('user1')
+# Code to add widgets will go here...
+menubar = tk.Menu(root)
+filemenu = tk.Menu(menubar, tearoff=0)
+filemenu.add_command(label="Login", command=loginForm)
+#filemenu.add_command(label="New", command=donothing)
+#filemenu.add_command(label="Open", command=donothing)
+#filemenu.add_command(label="Save", command=donothing)
+#filemenu.add_command(label="Save as...", command=donothing)
+#filemenu.add_command(label="Close", command=donothing)
+
+#filemenu.add_separator()
+
+#filemenu.add_command(label="Exit", command=root.quit)
+menubar.add_cascade(label="Me", menu=filemenu)
+
+'''
+editmenu = tk.Menu(menubar, tearoff=0)
+editmenu.add_command(label="Undo", command=donothing)
+
+editmenu.add_separator()
+
+editmenu.add_command(label="Cut", command=donothing)
+editmenu.add_command(label="Copy", command=donothing)
+editmenu.add_command(label="Paste", command=donothing)
+editmenu.add_command(label="Delete", command=donothing)
+editmenu.add_command(label="Select All", command=donothing)
+
+menubar.add_cascade(label="Edit", menu=editmenu)
+helpmenu = tk.Menu(menubar, tearoff=0)
+helpmenu.add_command(label="Help Index", command=donothing)
+helpmenu.add_command(label="About...", command=donothing)
+menubar.add_cascade(label="Help", menu=helpmenu)
+'''
+root.config(menu=menubar)
+
+
+
+#B = tk.Button(top, text ="Hello", command = helloCallBack)
+
+#B.pack()
+
+root.mainloop()
+
